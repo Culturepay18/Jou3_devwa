@@ -1,30 +1,40 @@
-import 'dart:async';
+﻿import 'dart:async';
 import 'package:flutter/material.dart';
 
 void main() {
   runApp(const MyApp());
 }
 
+class User {
+  final String email;
+  final String password;
+  const User(this.email, this.password);
+}
+
 class FakeAuthDatabase {
-  static final Map<String, String> _users = {
-    'demo@jou3.com': 'password123',
-  };
+  static final List<User> _users = [
+    const User('demo@jou3.com', 'password123'),
+  ];
 
   static bool isValidEmail(String email) {
-    final emailRegex =
-        RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$'); // basic email format
+    final emailRegex = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
     return emailRegex.hasMatch(email);
   }
 
   static bool validateLogin(String email, String password) {
-    return _users[email] == password;
+    final match = _users.firstWhere(
+      (u) =>
+          u.email.toLowerCase() == email.toLowerCase() && u.password == password,
+      orElse: () => const User('', ''),
+    );
+    return match.email.isNotEmpty;
   }
 
   static bool addUser(String email, String password) {
-    if (_users.containsKey(email)) {
-      return false;
-    }
-    _users[email] = password;
+    final exists =
+        _users.any((u) => u.email.toLowerCase() == email.toLowerCase());
+    if (exists) return false;
+    _users.add(User(email, password));
     return true;
   }
 }
@@ -36,11 +46,46 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Jou 3',
+      debugShowCheckedModeBanner: false,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.indigo),
         useMaterial3: true,
+        scaffoldBackgroundColor: const Color(0xfff6f7fb),
+        appBarTheme: const AppBarTheme(
+          centerTitle: true,
+          elevation: 0,
+          backgroundColor: Colors.transparent,
+          foregroundColor: Colors.indigo,
+        ),
+        elevatedButtonTheme: ElevatedButtonThemeData(
+          style: ElevatedButton.styleFrom(
+            minimumSize: const Size(double.infinity, 50),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            backgroundColor: Colors.indigo,
+            foregroundColor: Colors.white,
+            textStyle: const TextStyle(fontWeight: FontWeight.w600),
+          ),
+        ),
+        outlinedButtonTheme: OutlinedButtonThemeData(
+          style: OutlinedButton.styleFrom(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+        ),
         inputDecorationTheme: InputDecorationTheme(
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+          filled: true,
+          fillColor: Colors.white,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(14),
+            borderSide: const BorderSide(color: Color(0xffdfe3eb)),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(14),
+            borderSide: const BorderSide(color: Colors.indigo, width: 1.4),
+          ),
         ),
       ),
       initialRoute: '/splash',
@@ -103,7 +148,16 @@ class _SplashScreenState extends State<SplashScreen> {
             Text(
               'Aplikasyon Demo',
               style: TextStyle(color: Colors.white70, fontSize: 16),
-            )
+            ),
+            SizedBox(height: 24),
+            SizedBox(
+              width: 36,
+              height: 36,
+              child: CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                strokeWidth: 3,
+              ),
+            ),
           ],
         ),
       ),
@@ -138,7 +192,7 @@ class _LoginPageState extends State<LoginPage> {
       if (FakeAuthDatabase.validateLogin(email, password)) {
         Navigator.of(context).pushReplacementNamed('/home');
       } else {
-        _showMessage('Login echwe: imèl oswa modpas pa kòrèk.');
+        _showMessage('Login echwe: imel oswa modpas pa korek.');
       }
     }
   }
@@ -152,51 +206,108 @@ class _LoginPageState extends State<LoginPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: AppBar(title: const Text('Log In')),
-      body: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              TextFormField(
-                controller: _emailController,
-                decoration: const InputDecoration(labelText: 'Email'),
-                keyboardType: TextInputType.emailAddress,
-                validator: (value) {
-                  final email = value?.trim() ?? '';
-                  if (email.isEmpty) return 'Antre imèl la.';
-                  if (!FakeAuthDatabase.isValidEmail(email)) {
-                    return 'Fòma imèl la pa bon.';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _passwordController,
-                decoration: const InputDecoration(labelText: 'Password'),
-                obscureText: true,
-                validator: (value) {
-                  if ((value ?? '').isEmpty) return 'Antre modpas la.';
-                  return null;
-                },
-              ),
-              const SizedBox(height: 24),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: _submit,
-                  child: const Text('Log In'),
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Color(0xffeef2ff), Color(0xfff8fbff)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
+        child: Center(
+          child: SingleChildScrollView(
+            padding:
+                const EdgeInsets.fromLTRB(24, kToolbarHeight + 32, 24, 32),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 440),
+              child: Card(
+                elevation: 6,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(22),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Row(
+                          children: const [
+                            CircleAvatar(
+                              radius: 26,
+                              backgroundColor: Colors.indigo,
+                              child: Icon(Icons.lock_outline,
+                                  color: Colors.white),
+                            ),
+                            SizedBox(width: 12),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Bon retou',
+                                  style: TextStyle(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                                SizedBox(height: 2),
+                                Text(
+                                  'Konekte pou kontinye',
+                                  style: TextStyle(color: Colors.black54),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 24),
+                        TextFormField(
+                          controller: _emailController,
+                          decoration: const InputDecoration(labelText: 'Email'),
+                          keyboardType: TextInputType.emailAddress,
+                          autofillHints: const [AutofillHints.email],
+                          textCapitalization: TextCapitalization.none,
+                          autocorrect: false,
+                          validator: (value) {
+                            final email = value?.trim() ?? '';
+                            if (email.isEmpty) return 'Antre imel la.';
+                            if (!FakeAuthDatabase.isValidEmail(email)) {
+                              return 'Foma imel la pa bon.';
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 16),
+                        TextFormField(
+                          controller: _passwordController,
+                          decoration:
+                              const InputDecoration(labelText: 'Password'),
+                          keyboardType: TextInputType.visiblePassword,
+                          obscureText: true,
+                          validator: (value) {
+                            if ((value ?? '').isEmpty) return 'Antre modpas la.';
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 24),
+                        ElevatedButton(
+                          onPressed: _submit,
+                          child: const Text('Log In'),
+                        ),
+                        TextButton(
+                          onPressed: () =>
+                              Navigator.of(context).pushNamed('/signup'),
+                          child: const Text('Mwen pa gen kont?  Sign Up'),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ),
-              TextButton(
-                onPressed: () =>
-                    Navigator.of(context).pushNamed('/signup'),
-                child: const Text('Sign Up'),
-              ),
-            ],
+            ),
           ),
         ),
       ),
@@ -233,11 +344,11 @@ class _SignupPageState extends State<SignupPage> {
       final created = FakeAuthDatabase.addUser(email, password);
       if (created) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Kreye kont avèk siksè!')),
+          const SnackBar(content: Text('Kreye kont avek sikse!')),
         );
-        Navigator.of(context).pop(); // retounen sou login
+        Navigator.of(context).pop();
       } else {
-        _showMessage('Imèl sa egziste deja.');
+        _showMessage('Imel sa egziste deja.');
       }
     }
   }
@@ -251,66 +362,130 @@ class _SignupPageState extends State<SignupPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: AppBar(title: const Text('Sign Up')),
-      body: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              TextFormField(
-                controller: _emailController,
-                decoration: const InputDecoration(labelText: 'Email'),
-                keyboardType: TextInputType.emailAddress,
-                validator: (value) {
-                  final email = value?.trim() ?? '';
-                  if (email.isEmpty) return 'Antre imèl la.';
-                  if (!FakeAuthDatabase.isValidEmail(email)) {
-                    return 'Fòma imèl la pa bon.';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _passwordController,
-                decoration: const InputDecoration(labelText: 'Password'),
-                obscureText: true,
-                validator: (value) {
-                  final password = value ?? '';
-                  if (password.isEmpty) return 'Antre modpas la.';
-                  if (password.length < 8) {
-                    return 'Modpas la dwe gen omwen 8 karaktè.';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _confirmController,
-                decoration:
-                    const InputDecoration(labelText: 'Confirm Password'),
-                obscureText: true,
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Konfime modpas la.';
-                  }
-                  if (value != _passwordController.text) {
-                    return 'Modpas yo pa menm.';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 24),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: _register,
-                  child: const Text('Sign Up'),
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Color(0xfff8fbff), Color(0xffeef2ff)],
+            begin: Alignment.topRight,
+            end: Alignment.bottomLeft,
+          ),
+        ),
+        child: Center(
+          child: SingleChildScrollView(
+            padding:
+                const EdgeInsets.fromLTRB(24, kToolbarHeight + 32, 24, 32),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 440),
+              child: Card(
+                elevation: 6,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(22),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Row(
+                          children: const [
+                            CircleAvatar(
+                              radius: 26,
+                              backgroundColor: Colors.indigo,
+                              child: Icon(Icons.person_add_alt,
+                                  color: Colors.white),
+                            ),
+                            SizedBox(width: 12),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Nouvo kont',
+                                  style: TextStyle(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                                SizedBox(height: 2),
+                                Text(
+                                  'Antre detay ou yo',
+                                  style: TextStyle(color: Colors.black54),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 24),
+                        TextFormField(
+                          controller: _emailController,
+                          decoration: const InputDecoration(labelText: 'Email'),
+                          keyboardType: TextInputType.emailAddress,
+                          autofillHints: const [AutofillHints.email],
+                          textCapitalization: TextCapitalization.none,
+                          autocorrect: false,
+                          validator: (value) {
+                            final email = value?.trim() ?? '';
+                            if (email.isEmpty) return 'Antre imel la.';
+                            if (!FakeAuthDatabase.isValidEmail(email)) {
+                              return 'Foma imel la pa bon.';
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 16),
+                        TextFormField(
+                          controller: _passwordController,
+                          decoration:
+                              const InputDecoration(labelText: 'Password'),
+                          keyboardType: TextInputType.visiblePassword,
+                          obscureText: true,
+                          validator: (value) {
+                            final password = value ?? '';
+                            if (password.isEmpty) return 'Antre modpas la.';
+                            if (password.length < 8) {
+                              return 'Modpas la dwe gen omwen 8 karakte.';
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 16),
+                        TextFormField(
+                          controller: _confirmController,
+                          decoration:
+                              const InputDecoration(labelText: 'Confirm Password'),
+                          keyboardType: TextInputType.visiblePassword,
+                          obscureText: true,
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Konfime modpas la.';
+                            }
+                            if (value != _passwordController.text) {
+                              return 'Modpas yo pa menm.';
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 24),
+                        ElevatedButton(
+                          onPressed: _register,
+                          child: const Text('Sign Up'),
+                        ),
+                        Center(
+                          child: TextButton(
+                            onPressed: () => Navigator.of(context).pop(),
+                            child: const Text('Mwen deja gen kont? Log In'),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ),
-            ],
+            ),
           ),
         ),
       ),
@@ -324,30 +499,51 @@ class HomePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: AppBar(title: const Text('Home')),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.thumb_up_alt_outlined, size: 72),
-            const SizedBox(height: 12),
-            const Text(
-              'Byenveni lakay ou!',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+      body: Container(
+        width: double.infinity,
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Color(0xffeef2ff), Color(0xfff8fbff)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
+        child: Center(
+          child: Card(
+            elevation: 6,
+            margin: const EdgeInsets.all(24),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(22),
             ),
-            const SizedBox(height: 8),
-            const Text(
-              'Ou konekte avèk siksè. Sa a se yon kontni estatik.',
-              textAlign: TextAlign.center,
+            child: Padding(
+              padding: const EdgeInsets.all(28),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.thumb_up_alt_outlined, size: 72),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'Byenveni lakay ou!',
+                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Ou konekte avek sikse. Kontni sa a rete statik.',
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 24),
+                  OutlinedButton(
+                    onPressed: () {
+                      Navigator.of(context).pushReplacementNamed('/login');
+                    },
+                    child: const Text('Log Out'),
+                  ),
+                ],
+              ),
             ),
-            const SizedBox(height: 24),
-            OutlinedButton(
-              onPressed: () {
-                Navigator.of(context).pushReplacementNamed('/login');
-              },
-              child: const Text('Log Out'),
-            ),
-          ],
+          ),
         ),
       ),
     );
